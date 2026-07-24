@@ -114,7 +114,7 @@ async def inline_query(update: Update, context: ContextTypes.DEFAULT_TYPE):
         ))
 
     result = InlineQueryResultCachedPhoto(
-        id=art["file_id"],
+        id=hashlib.md5(art["file_id"].encode()).hexdigest(),
         photo_file_id=art["file_id"],
         title="Ежедневная вайфу",
         description="Сегодняшняя вайфу...",
