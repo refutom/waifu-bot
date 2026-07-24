@@ -1,0 +1,4 @@
+config.py
+waifu_db.json
+__pycache__/
+*.pyc
