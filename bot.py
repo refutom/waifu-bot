@@ -479,4 +479,131 @@ async def approve(q, bot, st, req_id):
     req = st.get("pending", {}).get(req_id)
     if not req:
         await q.answer("Заявка уже обработана.", show_alert=True); return
-    if req.get("title_id") and str(req["title_id
+        # --- собрать/создать источник ---
+    title_id = req.get("title_id")
+    if title_id and str(title_id) in st["titles"]:
+        title_id = int(title_id)
+        title_name = st["titles"][str(title_id)]["name"]
+    else:
+        title_id = st["next_title_id"]
+        st["next_title_id"] = title_id + 1
+        title_name = req.get("title_name") or "(без названия)"
+        st["titles"][str(title_id)] = {"id": title_id, "name": title_name}
+    # --- собрать/создать персонажа ---
+    char_id = req.get("char_id")
+    if char_id and str(char_id) in st["characters"]:
+        char_id = int(char_id)
+        ch = st["characters"][str(char_id)]
+        char_name = ch["name"]
+    else:
+        char_id = st["next_char_id"]
+        st["next_char_id"] = char_id + 1
+        char_name = req.get("char_name") or "(без имени)"
+        ch = {"id": char_id, "name": char_name, "title_id": title_id, "arts": []}
+        st["characters"][str(char_id)] = ch
+    ch.setdefault("arts", []).extend(req.get("arts", []))
+    save_state(st)
+    # --- публикация в канал ---
+    cap = (f"💖 {char_name}\n📚 {title_name}\n🆔 #{char_id}\n"
+           f"✍️ добавил: {req.get('author_name', 'анон')}")
+    arts = req.get("arts", [])
+    try:
+        if len(arts) == 1:
+            await bot.send_photo(PUBLISH_CHANNEL, arts[0]["file_id"], caption=cap)
+        elif len(arts) > 1:
+            media = [InputMediaPhoto(a["file_id"], caption=(cap if i == 0 else None))
+                     for i, a in enumerate(arts)]
+            await bot.send_media_group(PUBLISH_CHANNEL, media)
+    except Exception as e:
+        logger.error(f"publish fail: {e}")
+    st["pending"].pop(req_id, None)
+    save_state(st)
+    try:
+        await q.edit_message_caption(caption="✅ Одобрено и опубликовано в канале.")
+    except Exception:
+        await q.edit_message_text("✅ Одобрено и опубликовано в канале.")
+    await q.answer()
+
+
+async def reject(q, bot, st, req_id):
+    if not await is_mod(bot, q.from_user.id):
+        await q.answer("Только модераторы.", show_alert=True); return
+    if req_id not in st.get("pending", {}):
+        await q.answer("Заявка уже обработана.", show_alert=True); return
+    st["pending"].pop(req_id, None)
+    save_state(st)
+    try:
+        await q.edit_message_caption(caption="❌ Отклонено.")
+    except Exception:
+        await q.edit_message_text("❌ Отклонено.")
+    await q.answer()
+
+
+async def on_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    q = update.callback_query
+    data = q.data or ""
+    st = load_state(); ensure(st)
+    try:
+        if data == "reveal":
+            await reveal(q)
+        elif data == "refresh":
+            await refresh(q)
+        elif data == "keep":
+            await keep(q)
+        elif data == "checkin":
+            await checkin(q)
+        elif data == "userstat":
+            await userstat(q)
+        elif data == "add_start":
+            await begin_add(q.from_user.id, q.message.reply_text, st)
+            await q.answer()
+        elif data == "add_submit":
+            await add_submit(q, context.bot, st)
+        elif data == "add_cancel":
+            await add_cancel(q, st)
+        elif data == "add_new_char":
+            await add_new_char(q, st)
+        elif data == "add_new_title":
+            await add_new_title(q, st)
+        elif data.startswith("add_pick_char:"):
+            await add_pick_char(q, st, data.split(":", 1)[1])
+        elif data.startswith("add_pick_title:"):
+            await add_pick_title(q, st, data.split(":", 1)[1])
+        elif data.startswith("approve:"):
+            await approve(q, context.bot, st, data.split(":", 1)[1])
+        elif data.startswith("reject:"):
+            await reject(q, context.bot, st, data.split(":", 1)[1])
+        else:
+            await q.answer()
+    except Exception as e:
+        logger.error(f"callback error: {e}")
+        await q.answer("Ошибка.", show_alert=True)
+
+
+def main():
+    app = Application.builder().token(BOT_TOKEN).build()
+    app.add_handler(CommandHandler("start", start))
+    app.add_handler(CommandHandler("add", add_cmd))
+    app.add_handler(CommandHandler("setcover", setcover))
+    app.add_handler(MessageHandler(filters.PHOTO & filters.ChatType.PRIVATE, handle_photo))
+    app.add_handler(MessageHandler(filters.TEXT & filters.ChatType.PRIVATE & ~filters.COMMAND, handle_text))
+    app.add_handler(InlineQueryHandler(inline_query))
+    app.add_handler(CallbackQueryHandler(on_callback))
+    logger.info("🚀 Бот запущен!")
+    app.run_polling(allowed_updates=["message", "inline_query", "callback_query"])
+
+
+if __name__ == "__main__":
+    main()
+
+
+
+
+
+
+
+
+
+
+
+         
