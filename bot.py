@@ -141,7 +141,7 @@ async def begin_add(uid, send_coro_text, st):
     ensure(st)
     st["add_sessions"][str(uid)] = {"step": "char_name"}
     save_state(st)
-    await send_coro_text("✍️ Введи имя персонажа (или его ID, если он уже есть в базе).")
+    await send_coro_text("✍️ Введи имя персонажа.")
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     st = load_state(); ensure(st); save_state(st)
@@ -153,7 +153,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     arts = sum(len(c["arts"]) for c in chars)
     text = (f"Привет! Персонажей в базе: {len(chars)}, артов: {arts}.\n"
             f"Напиши @{context.bot.username} в любом чате — "
-            f"выпадут вайфу, удача и статистика.")
+            f"чтобы вызвать бота.")
     if uid == ADMIN_ID:
         text += "\n\n🛠 Админу: /setcover — поставить обложку-заглушку."
     kb = [
@@ -204,7 +204,7 @@ async def handle_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
 # ================= ТЕКСТ В ЛИЧКЕ (диалог добавления) =================
-ARTS_PROMPT = "📸 Пришли фото арта. В подписи к фото — ссылка на источник.\nМожно до 10 фото. После каждого жми «Отправить на модерацию»."
+ARTS_PROMPT = "📸 Пришли фото арта. В подписи к фото — ссылка на источник.\nМожно до 10 фото."
 
 async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
     uid = update.effective_user.id
@@ -236,7 +236,7 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
         sess["step"] = "title_name"
         save_state(st)
         await update.message.reply_text(
-            "Персонажа нет в базе — создадим.\nТеперь введи название произведения/источника (или его ID, если уже есть):")
+            "Персонажа нет в базе — создадим.\nТеперь введи название источника:")
         return
 
     if step == "title_name":
@@ -275,8 +275,8 @@ async def inline_query(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if cover:
         results.append(InlineQueryResultCachedPhoto(
             id="waifu", photo_file_id=cover,
-            title="💖 Ежедневная вайфу", description="Нажми, чтобы узнать свою",
-            caption="💖 Нажми кнопку ниже, чтобы узнать свою вайфу дня",
+            title="Ежедневная вайфу", description="Нажми, чтобы узнать свою",
+            caption=" Нажми кнопку ниже, чтобы узнать свою вайфу дня",
             reply_markup=InlineKeyboardMarkup([[
                 InlineKeyboardButton("💖 Узнать свою вайфу", callback_data="reveal")]])))
     else:
@@ -356,7 +356,7 @@ async def keep(q):
     if not m:
         await q.answer("Сообщение не найдено.", show_alert=True); return
     if q.from_user.id != m["owner"]:
-        await q.answer("Оставить может только тот, кто вызвал вайфу.", show_alert=True); return
+        await q.answer("Оставить может только тот, кто вызвал команду.", show_alert=True); return
     await q.edit_message_reply_markup(reply_markup=None)
     await q.answer("Оставлено 💖")
 
@@ -409,7 +409,7 @@ async def add_new_char(q, st):
     sess["char_name"] = sess.get("typed_char", "")
     sess["step"] = "title_name"
     save_state(st)
-    await q.edit_message_text("Создаём нового персонажа.\nВведи название произведения/источника (или его ID):")
+    await q.edit_message_text("Создаём нового персонажа.\nВведи название произведения/источника:")
 
 async def add_pick_title(q, st, tid):
     sess = st["add_sessions"].get(str(q.from_user.id))
@@ -452,7 +452,7 @@ async def add_submit(q, bot, st):
            f"👤 Персонаж: {char_name or '(новый)'}" + (f" #{char_id}" if char_id else "") + "\n"
            f"📚 Источник: {title_name or '(новый)'}" + (f" #{title_id}" if title_id else "") + "\n"
            f"🖼 Артов: {len(sess['arts'])}\n"
-           f"✍️ Автор: {author_name} ({uid})")
+           f"✍️ Автор: {author_name} ")
     kb = InlineKeyboardMarkup([[
         InlineKeyboardButton("✅ Одобрить", callback_data=f"approve:{req_id}"),
         InlineKeyboardButton("❌ Отклонить", callback_data=f"reject:{req_id}")]])
@@ -504,8 +504,8 @@ async def approve(q, bot, st, req_id):
     ch.setdefault("arts", []).extend(req.get("arts", []))
     save_state(st)
     # --- публикация в канал ---
-    cap = (f"💖 {char_name}\n📚 {title_name}\n🆔 #{char_id}\n"
-           f"✍️ добавил: {req.get('author_name', 'анон')}")
+    cap = (f" имя: {char_name}\n источник: {title_name}\n id: #{char_id}\n"
+           f" автор: {req.get('author_name', 'анон')}")
     arts = req.get("arts", [])
     try:
         if len(arts) == 1:
@@ -519,9 +519,9 @@ async def approve(q, bot, st, req_id):
     st["pending"].pop(req_id, None)
     save_state(st)
     try:
-        await q.edit_message_caption(caption="✅ Одобрено и опубликовано в канале.")
+        await q.edit_message_caption(caption="✅ Одобрено.")
     except Exception:
-        await q.edit_message_text("✅ Одобрено и опубликовано в канале.")
+        await q.edit_message_text("✅ Одобрено.")
     await q.answer()
 
 
