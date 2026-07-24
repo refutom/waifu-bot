@@ -1,10 +1,10 @@
 import os
 
 # Bot Token от @BotFather
-BOT_TOKEN = os.environ.get("BOT_TOKEN", "ТВОЙ_ТОКЕН")
+BOT_TOKEN = os.environ.get("BOT_TOKEN", "8618366166:AAEsBB2wqZHh9c7tz22RXLgYjMr6uzUG_HI")
 
 # ID канала (обязательно с @ или -100...)
-CHANNEL_ID = os.environ.get("CHANNEL_ID", "@твой_канал")
+CHANNEL_ID = os.environ.get("CHANNEL_ID", "-1003864317109")
 
 # API_ID и API_HASH с my.telegram.org (для чтения канала)
 API_ID = os.environ.get("API_ID", "123456")
